@@ -13,7 +13,7 @@ class ParseElements:
        
     def setAttribute(self):
         editedElement = self.__elementData[0:len(self.__elementKind)+1]
-        if " version" not in self.__elementData:editedElement+= f" verison={self.__quotesType}6{self.__quotesType} "
+        if " version" not in self.__elementData:editedElement+= f" version={self.__quotesType}6{self.__quotesType} "
         if " timestamp" not in self.__elementData:editedElement+= self.__timestamp
         return editedElement + self.__elementData[len(self.__elementKind):-1]+">"
 
