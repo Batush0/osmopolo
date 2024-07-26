@@ -1,5 +1,6 @@
 import argparse
 from parseElements import ParseElements 
+# import asyncio
 
 class Osmopolo:
     def __init__(self):
@@ -23,57 +24,77 @@ class Osmopolo:
         orderParser.add_argument('--add-args', action="store_true" , help="Append necessary arguments to elements")
 
         self.args = parser.parse_args()
+
+    
+    def clearElements(self,arr):
+        seen_ids = set()
+        unique_list = []
+        
+        for item in arr:
+            if item['id'] not in seen_ids:
+                unique_list.append(item)
+                seen_ids.add(item['id'])
+            
+        return unique_list
+
+    def handleCleanSectionProcess(self,key,elements):
+        
+        cleanElements = self.clearElements(elements)
+        length = len(cleanElements)
+        
+        print(f"writing {key} data , just {len(elements) - length} rows of duplicated elements deleted!")
+        
+        mid_index = length // 2
+        part1 = cleanElements[0:mid_index] if length % 2 == 0 else cleanElements[0:(mid_index + 1)]
+        part2 = cleanElements[mid_index:] if length % 2 == 0 else cleanElements[mid_index+1:]
+        del cleanElements
+        
+        self.__outputFile.write("".join([item["content"] for item in part1]))
+        del part1
+
+        print(f"writing {key} process in 1/2")
+        
+        self.__outputFile.write("".join([item["content"] for item in part2]))
+        del part2
+        
+
+        
     
     def clean(self):
         parser = ParseElements(self.args.input,self.args.add_args)
-        elements = parser.parse()
+        
+        self.__outputFile.write("<?xml version='1.0' encoding='UTF-8'?>\n<osm version='0.6' generator='JOSM'>\n")
+        
+        parser.parse(self.handleCleanSectionProcess)
 
-        def clearElements(arr):
-            seen_ids = set()
-            unique_list = []
-            
-            for item in arr:
-                if item['id'] not in seen_ids:
-                    unique_list.append(item)
-                    seen_ids.add(item['id'])
-            
-            return unique_list
-
-        cleanNode = clearElements(elements["node"])
-        print("node")
-        print("- elements leng : ",len(elements["node"]))
-        print("- cleaned elements leng : ",len(cleanNode))
-
-        cleanWay = clearElements(elements["way"])
-        print("way")
-        print("- elements leng : ",len(elements["way"]))
-        print("- cleaned elements leng : ",len(cleanWay))
-
-        cleanRelation = clearElements(elements["relation"])
-        print("relation")
-        print("- elements leng : ",len(elements["relation"]))
-        print("- cleaned elements leng : ",len(cleanRelation))
-
-        print("write process started")
-
-        self.__outputFile.write("<?xml version='1.0' encoding='UTF-8'?><osm version='0.6' generator='JOSM'>")
-        self.__outputFile.write("".join([item["content"] for item in cleanNode]))
-        self.__outputFile.write("".join([item["content"] for item in cleanWay]))
-        self.__outputFile.write("".join([item["content"] for item in cleanRelation]))
         self.__outputFile.write("</osm>")
 
         print("all done!")
 
+    def handleOrderSectionProcess(self,key,elements):
+        print(f"ordering {key}")
+
+        sortedElements = sorted(elements, key=lambda x: x["id"])
+        length = len(sortedElements)
+        mid_index = length // 2
+        part1 = sortedElements[0:mid_index] if length % 2 == 0 else sortedElements[0:(mid_index + 1)]
+        part2 = sortedElements[mid_index:] if length % 2 == 0 else sortedElements[mid_index+1:]
+        del sortedElements
+        
+        self.__outputFile.write("".join([item["content"] for item in part1]))
+        del part1
+
+        self.__outputFile.write("".join([item["content"] for item in part2]))
+        del part2
+
+
     def order(self):
         parser = ParseElements(self.args.input,self.args.add_args)
-        elements = parser.parse()
 
-        print("write process started")
+        self.__outputFile.write("<?xml version='1.0' encoding='UTF-8'?>\n<osm version='0.6' generator='JOSM'>\n")
 
-        self.__outputFile.write("<?xml version='1.0' encoding='UTF-8'?><osm version='0.6' generator='JOSM'>")
-        self.__outputFile.write("".join(element["content"] for element in sorted(elements["node"], key=lambda x: x["id"])))
-        self.__outputFile.write("".join(element["content"] for element in sorted(elements["way"], key=lambda x: x["id"])))
-        self.__outputFile.write("".join(element["content"] for element in sorted(elements["relation"], key=lambda x: x["id"])))
+        parser.parse(self.handleOrderSectionProcess)
+
         self.__outputFile.write("</osm>")
 
         print("all done!")

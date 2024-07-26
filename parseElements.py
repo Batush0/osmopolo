@@ -18,7 +18,7 @@ class ParseElements:
         return editedElement + self.__elementData[len(self.__elementKind):-1]+">"
 
 
-    def parse(self):
+    def parse(self,onSectionDone):
         self.__file.readline()
         quoteLine = self.__file.readline()
         quoteKeyword = "<osm version="
@@ -33,24 +33,38 @@ class ParseElements:
 
         idKeyword = f" id={self.__quotesType}"
 
+        previousElementKey = "node"
+
         while True:
             line = self.__file.readline().strip()
 
             #collect element data
             if self.__elementDataCollected == True : 
-                self.__elementData = line
+                self.__elementData = line + "\n"
                 self.__elementDataCollected = False
+                currentKey = ""
 
-                if "<node " in line:self.__elementKind = "node"
-                elif "<way" in line:self.__elementKind = "way"
-                elif "<relation" in line:self.__elementKind = "relation"
-                elif "</osm>" in line:break
-                else:
+                if "<node " in line:currentKey = "node"
+                elif "<way" in line:currentKey = "way"
+                elif "<relation" in line:currentKey = "relation"
+                elif "</osm>" in line:currentKey = "osm"
+
+                if currentKey == "":
                     self.__elementData = ""
                     self.__elementDataCollected = True
                     continue
 
-            else : self.__elementData += line
+                self.__elementKind = currentKey
+                if currentKey != previousElementKey:
+                    onSectionDone(previousElementKey,elements[previousElementKey])
+                    del elements[previousElementKey]
+                    previousElementKey = currentKey
+                
+                if currentKey == "osm":break
+
+
+
+            else : self.__elementData += line + "\n"
 
             if self.__getElementCount() == 1 and "/>" in self.__elementData: self.__elementDataCollected = True
             if self.__elementDataCollected == False:
