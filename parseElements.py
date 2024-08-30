@@ -15,7 +15,7 @@ class ParseElements:
         editedElement = self.__elementData[0:len(self.__elementKind)+1]
         if " version" not in self.__elementData:editedElement+= f" version={self.__quotesType}6{self.__quotesType} "
         if " timestamp" not in self.__elementData:editedElement+= self.__timestamp
-        return editedElement + self.__elementData[len(self.__elementKind):-1]+">"
+        return editedElement + self.__elementData[len(self.__elementKind)+1:-1]+"\n"
 
 
     def parse(self,onSectionDone):
@@ -40,7 +40,7 @@ class ParseElements:
 
             #collect element data
             if self.__elementDataCollected == True : 
-                self.__elementData = line + "\n"
+                self.__elementData = line+"\n"
                 self.__elementDataCollected = False
                 currentKey = ""
 
