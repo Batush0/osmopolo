@@ -24,6 +24,10 @@ class CliController:
 
         self.args = parser.parse_args()
 
+        if not self.args.command:
+            parser.print_help()
+            exit(1)
+
     
     def clearElements(self,arr):
         seen_ids = set()
