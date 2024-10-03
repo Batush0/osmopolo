@@ -66,7 +66,7 @@ class CliController:
     def clean(self):
         parser = ParseElements(self.args.input,self.args.add_args)
         
-        self.__outputFile.write("<?xml version='1.0' encoding='UTF-8'?>\n<osm version='0.6' generator='JOSM'>\n")
+        self.__outputFile.write('<?xml version="1.0" encoding="UTF-8"?>\n<osm version="0.6" generator="JOSM">\n')
         
         parser.parse(self.handleCleanSectionProcess)
 
@@ -94,7 +94,7 @@ class CliController:
     def order(self):
         parser = ParseElements(self.args.input,self.args.add_args)
 
-        self.__outputFile.write("<?xml version='1.0' encoding='UTF-8'?>\n<osm version='0.6' generator='JOSM'>\n")
+        self.__outputFile.write('<?xml version="1.0" encoding="UTF-8"?>\n<osm version="0.6" generator="JOSM">\n')
 
         parser.parse(self.handleOrderSectionProcess)
 
