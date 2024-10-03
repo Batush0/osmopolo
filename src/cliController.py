@@ -1,108 +1,56 @@
 import argparse
-from src.parseElements import ParseElements 
+from xml.etree import ElementTree
+from src.service import Service
 
 class CliController:
     def __init__(self):
         self.__init_parser__()
-        self.__outputFile = open(self.args.output, 'w', encoding="utf-8")
-        self.__run__()
+        self.route()
     
     def __init_parser__(self):
         parser = argparse.ArgumentParser(description="Welcome to osmopolo cli! This app made for care broken osm files.")
 
-        subParsers = parser.add_subparsers(dest='command')
-        
-        cleanParser = subParsers.add_parser('clean', help="Cleans id's which has more than one in single file")
-        cleanParser.add_argument('--input',"-i", type=str, help="Input files path")
-        cleanParser.add_argument('--output',"-o", type=str, help="Output files path")
-        cleanParser.add_argument('--add-args', action="store_true" , help="Append necessary arguments to elements")
+        command_descriptions = {
+            'clean': "Cleans IDs which have more than one in a single file.",
+            'order': "Puts elements in correct order according to their id.",
+            'sign': "Signs new elements with negative ids by giving them positive uniq ids"
+        }
 
-        orderParser = subParsers.add_parser('order', help="Orders elements in correct way")
-        orderParser.add_argument('--input',"-i", type=str, help="Input files path")
-        orderParser.add_argument('--output',"-o", type=str, help="Output files path")
-        orderParser.add_argument('--add-args', action="store_true" , help="Append necessary arguments to elements")
+        commands_help = "\n".join([f"{cmd}: {desc}" for cmd, desc in command_descriptions.items()])
+        parser.add_argument('--commands', nargs='+', choices=command_descriptions.keys(),
+                            help=f"List of commands to execute in order. Available commands:\n\n{commands_help}")
+
+        parser.add_argument('--input',"-i", type=str, help="Input files path")
+        parser.add_argument('--output',"-o", type=str, help="Output files path")
+        parser.add_argument('--add-args', action="store_true" , help="Append necessary arguments to elements")
 
         self.args = parser.parse_args()
 
-        if not self.args.command:
-            parser.print_help()
+        if not self.args.commands:
+            print("err : You should give commands \n")
+            exit(1)
+        if not self.args.input:
+            print("err : You should give input file \n")
+            exit(1)
+        if not self.args.output:
+            print("err : You should output file \n")
             exit(1)
 
     
-    def clearElements(self,arr):
-        seen_ids = set()
-        unique_list = []
-        
-        for item in arr:
-            if item['id'] not in seen_ids:
-                unique_list.append(item)
-                seen_ids.add(item['id'])
-            
-        return unique_list
-
-    def handleCleanSectionProcess(self,key,elements):
-        
-        cleanElements = self.clearElements(elements)
-        length = len(cleanElements)
-        
-        print(f"writing {key} data , just {len(elements) - length} rows of duplicated elements deleted!")
-        
-        mid_index = length // 2
-        part1 = cleanElements[0:mid_index] if length % 2 == 0 else cleanElements[0:(mid_index + 1)]
-        part2 = cleanElements[mid_index:] if length % 2 == 0 else cleanElements[mid_index+1:]
-        del cleanElements
-        
-        self.__outputFile.write("".join([item["content"] for item in part1]))
-        del part1
-
-        print(f"writing {key} process in 1/2")
-        
-        self.__outputFile.write("".join([item["content"] for item in part2]))
-        del part2
-        
-
-        
     
-    def clean(self):
-        parser = ParseElements(self.args.input,self.args.add_args)
-        
-        self.__outputFile.write('<?xml version="1.0" encoding="UTF-8"?>\n<osm version="0.6" generator="JOSM">\n')
-        
-        parser.parse(self.handleCleanSectionProcess)
+    def route(self):
+        elementTree = ElementTree.parse(self.args.input)
 
-        self.__outputFile.write("</osm>")
+        for command in self.args.commands:
+            match command:
+                case "clean":
+                    elementTree = Service.clean(elementTree)
+                    continue
+                case "order":
+                    elementTree = Service.order(elementTree)
+                    continue
+                case "sign":
+                    elementTree = Service.sign(elementTree)
+                    continue
 
-        print("all done!")
-
-    def handleOrderSectionProcess(self,key,elements):
-        print(f"ordering {key}")
-
-        sortedElements = sorted(elements, key=lambda x: x["id"])
-        length = len(sortedElements)
-        mid_index = length // 2
-        part1 = sortedElements[0:mid_index] if length % 2 == 0 else sortedElements[0:(mid_index + 1)]
-        part2 = sortedElements[mid_index:] if length % 2 == 0 else sortedElements[mid_index+1:]
-        del sortedElements
-        
-        self.__outputFile.write("".join([item["content"] for item in part1]))
-        del part1
-
-        self.__outputFile.write("".join([item["content"] for item in part2]))
-        del part2
-
-
-    def order(self):
-        parser = ParseElements(self.args.input,self.args.add_args)
-
-        self.__outputFile.write('<?xml version="1.0" encoding="UTF-8"?>\n<osm version="0.6" generator="JOSM">\n')
-
-        parser.parse(self.handleOrderSectionProcess)
-
-        self.__outputFile.write("</osm>")
-
-        print("all done!")
-
-    def __run__(self):
-        if self.args.command == 'clean': self.clean()
-        elif self.args.command == 'order': self.order()
-        elif self.args.command == 'add-args': self.order()
+        elementTree.write(self.args.output)
