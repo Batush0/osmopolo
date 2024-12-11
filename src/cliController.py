@@ -13,28 +13,34 @@ class CliController:
         command_descriptions = {
             'clean': "Cleans IDs which have more than one in a single file.",
             'order': "Puts elements in correct order according to their id.",
-            'sign': "Signs new elements with negative ids by giving them positive uniq ids"
+            'sign': "Signs new elements with negative ids by giving them positive uniq ids.",
+            'latest': "Updates all elements timestamp field.",
+            'headers': "Sets needful data sets as headers"
         }
 
         commands_help = "\n".join([f"{cmd}: {desc}" for cmd, desc in command_descriptions.items()])
         parser.add_argument('--commands', nargs='+', choices=command_descriptions.keys(),
                             help=f"List of commands to execute in order. Available commands:\n\n{commands_help}")
-
         parser.add_argument('--input',"-i", type=str, help="Input files path")
         parser.add_argument('--output',"-o", type=str, help="Output files path")
-        parser.add_argument('--add-args', action="store_true" , help="Append necessary arguments to elements")
+        parser.add_argument("-bbox",type=str,help="Reads bbox value by given osm file.")
 
         self.args = parser.parse_args()
 
-        if not self.args.commands:
-            print("err : You should give commands \n")
-            exit(1)
-        if not self.args.input:
-            print("err : You should give input file \n")
-            exit(1)
-        if not self.args.output:
-            print("err : You should output file \n")
-            exit(1)
+        if self.args.bbox:
+            bbox = Service.readBbox(ElementTree.parse(self.args.bbox))
+            print(f"bbox : {bbox}")
+            exit()
+        elif self.args.commands:
+            if not self.args.input:
+                print("err : You should give input file \n")
+                exit(1)
+            if not self.args.output:
+                print("err : You should output file \n")
+                exit(1)
+        else:
+            parser.print_help()
+            exit()
 
     
     
@@ -51,6 +57,12 @@ class CliController:
                     continue
                 case "sign":
                     elementTree = Service.sign(elementTree)
+                    continue
+                case "latest":
+                    elementTree = Service.makeLatestAllElements(elementTree)
+                    continue
+                case "headers":
+                    elementTree = Service.setHeaders(elementTree)
                     continue
 
         elementTree.write(self.args.output)

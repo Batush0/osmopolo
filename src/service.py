@@ -1,5 +1,6 @@
 import time
 from xml.etree import ElementTree
+from datetime import datetime,timezone
 
 class Service:
     @staticmethod
@@ -19,6 +20,7 @@ class Service:
     @staticmethod
     def clean(xmlTree: ElementTree.ElementTree):
         root = Service.createRoot()
+        if xmlTree.find("bounds") != None:root.append(xmlTree.find("bounds"))
 
         for key in ["node","way","relation"]:
             seen_ids = set()
@@ -33,6 +35,7 @@ class Service:
     @staticmethod
     def sign(xmlTree: ElementTree.ElementTree):
         root = Service.createRoot()
+        if xmlTree.find("bounds") != None:root.append(xmlTree.find("bounds"))
         changeset = {
             "node":[],
             "way":[],
@@ -53,7 +56,78 @@ class Service:
                         for chs in changeset["node"]:
                             if chs["negative"] == int(nd.get("ref")):
                                 nd.set("ref",chs["new"])
+                elif key == "relation":
+                    for member in item.findall("member"):
+                        for chs in changeset["node"]:
+                            if chs["negative"] == int(member.get("ref")):
+                                member.set("ref",chs["new"])
                         
                 root.append(item)
             
         return ElementTree.ElementTree(root)
+    
+    @staticmethod
+    def makeLatestAllElements(xmlTree:ElementTree.ElementTree):
+        root = Service.createRoot()
+        if xmlTree.find("bounds") != None:root.append(xmlTree.find("bounds"))
+        timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+       
+        for key in ["node","way","relation"]:
+            for item in xmlTree.findall(key):
+                item.set("timestamp",timestamp)            
+                root.append(item)
+
+        return ElementTree.ElementTree(root)
+    
+    @staticmethod
+    def setHeaders(xmlTree:ElementTree.ElementTree):
+        root = Service.createRoot()
+        root.append(ElementTree.Element("bounds"))
+
+        for key in ["node","way","relation"]:
+            for item in xmlTree.findall(key):
+                root.append(item)
+        
+        bbox = Service.findBbox(root.findall("node"))
+        print(bbox)
+        if(bbox != None):
+            bounds = root.find("bounds")
+            bounds.set("minlon",str(bbox.get("minlon")))
+            bounds.set("minlat",str(bbox.get("minlat")))
+            bounds.set("maxlon",str(bbox.get("maxlon")))
+            bounds.set("maxlat",str(bbox.get("maxlat")))
+        else:
+            root.remove("bounds")
+        return ElementTree.ElementTree(root)
+    
+    @staticmethod
+    def findBbox(nodes: list[ElementTree.Element]):
+        min_lat = float(9999)
+        min_lon = float(9999)
+        max_lat = float(-9999)
+        max_lon = float(-9999)
+        
+        for node in nodes:
+            try:
+                min_lat = min(min_lat, float(node.get("lat")))
+                min_lon = min(min_lon, float(node.get("lon")))
+                max_lat = max(max_lat, float(node.get("lat")))
+                max_lon = max(max_lon, float(node.get("lon")))
+            except:
+                continue;
+        
+        if(min_lat == float(9999)): return None;
+        return {
+            "minlon":min_lon,
+            "minlat":min_lat,
+            "maxlon":max_lon,
+            "maxlat":max_lat
+        }
+    
+    @staticmethod
+    def readBbox(xmlTree:ElementTree.ElementTree):
+        try:
+            bounds = xmlTree.find("bounds")
+            return f"{float(bounds.get("minlon"))},{float(bounds.get("minlat"))},{float(bounds.get("maxlon"))},{float(bounds.get("maxlat"))}"
+        except:
+            return "cannot find bbox"
