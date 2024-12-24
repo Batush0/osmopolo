@@ -131,3 +131,59 @@ class Service:
             return f"{float(bounds.get("minlon"))},{float(bounds.get("minlat"))},{float(bounds.get("maxlon"))},{float(bounds.get("maxlat"))}"
         except:
             return "cannot find bbox"
+        
+    @staticmethod
+    def splitWays(xmlTree:ElementTree.ElementTree):
+        root = Service.createRoot()
+        root.extend(xmlTree.findall("node"));
+
+
+        for way in xmlTree.findall("way"):
+            wayNodes = way.findall("nd") 
+            splitNodes = []
+
+            #find nodes that used more than one way
+            for nd in wayNodes:
+                for compareWay in xmlTree.findall("way"):
+                    if(compareWay.get("id") == way.get("id")):continue
+
+                    if any(n.get("ref") == nd.get("ref") for n in compareWay.findall("nd")):
+                        splitNodes.append(nd)
+                        break
+            
+            if len(splitNodes) == 0:
+                continue
+
+            #order splitables
+            orderedSplitNodes = []
+            for i in range(len(wayNodes)):
+                wayNode = wayNodes[i]
+                for splitNode in splitNodes:
+                    if(wayNode.get("ref") == splitNode.get("ref")):
+                        orderedSplitNodes.append(splitNode)                    
+
+            other_elements = [elem for elem in way if elem.tag != "nd"]
+            
+
+            splitedWayNodes = [[]]
+
+            #split way
+            for wayNode in wayNodes:
+                splitedWayNodes[-1].append(wayNode)
+                if any(orderedNode.get("ref") == wayNode.get("ref") for orderedNode in orderedSplitNodes):
+                    splitedWayNodes.append([wayNode])
+            
+            for index,splitedWayElements in enumerate(splitedWayNodes):
+                newElement = ElementTree.Element("way")
+                newElement.set("id",str(time.time())[2:14].replace(".",""))
+                time.sleep(0.1)
+                newElement.set("version",str(1))
+                newElement.set("timestamp",datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))
+                if(index == 0):
+                    newElement.set("id",str(way.get("id")))
+                    newElement.set("version",str(int(way.get("version"))+1))
+                newElement.extend(splitedWayElements)
+                newElement.extend(other_elements)
+                root.append(newElement)
+
+        return ElementTree.ElementTree(root)

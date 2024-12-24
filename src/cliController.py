@@ -15,7 +15,8 @@ class CliController:
             'order': "Puts elements in correct order according to their id.",
             'sign': "Signs new elements with negative ids by giving them positive uniq ids.",
             'latest': "Updates all elements timestamp field.",
-            'headers': "Sets needful data sets as headers"
+            'headers': "Sets needful data sets as headers",
+            'split_ways': "Splits ways by intersections",
         }
 
         commands_help = "\n".join([f"{cmd}: {desc}" for cmd, desc in command_descriptions.items()])
@@ -63,6 +64,9 @@ class CliController:
                     continue
                 case "headers":
                     elementTree = Service.setHeaders(elementTree)
+                    continue
+                case "split_ways":
+                    elementTree = Service.splitWays(elementTree)
                     continue
 
         elementTree.write(self.args.output)
